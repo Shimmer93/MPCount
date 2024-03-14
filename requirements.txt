@@ -1,0 +1,10 @@
+numpy
+rich
+einops
+matplotlib
+glob2
+pyyaml
+scipy
+tqdm
+opencv-python
+pandas

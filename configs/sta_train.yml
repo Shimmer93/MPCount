@@ -1,0 +1,61 @@
+seed: 2023
+version: sta
+device: 'cuda:0'
+log_para: 1000
+patch_size: 10000
+mode: 'final'
+num_epochs: 180
+checkpoint: null
+model:
+  name: 'final'
+  params:
+    pretrained: True
+    mem_size: 1024
+    mem_dim: 256
+    cls_thrs: 0.5
+    err_thrs: 0.5
+    den_dropout: 0.5
+    cls_dropout: 0.3
+    has_err_loss: False
+train_dataset: &train_dataset_params
+  name: 'den_cls'
+  params: 
+    root: 'data/sta'
+    crop_size: 320
+    downsample: 1
+    is_grey: False
+    unit_size: 16
+    pre_resize: 1
+val_dataset: *train_dataset_params
+test_dataset:
+  name: 'den_cls'
+  params: 
+    root: '/mnt/home/zpengac/USERDIR/Crowd_counting/datasets/stb'
+    crop_size: 320
+    downsample: 1
+    is_grey: False
+    unit_size: 16
+    pre_resize: 1
+train_loader:
+  batch_size: 16
+  num_workers: 16
+  shuffle: True
+  pin_memory: True
+val_loader: &val_loader_params
+  batch_size: 1
+  num_workers: 4
+  shuffle: False
+  pin_memory: False
+test_loader: *val_loader_params
+optimizer:
+  name: 'adamw'
+  params:
+    lr: &lr 0.001
+    weight_decay: 0.0001
+scheduler:
+  name: 'onecycle'
+  params:
+    max_lr: *lr
+    epochs: 300
+    steps_per_epoch: 15
+    final_div_factor: 1000
