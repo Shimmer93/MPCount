@@ -1,6 +1,6 @@
 # Single Domain Generalization for Crowd Counting
 
-This is an official repository for our CVPR2024 work, "Single Domain Generalization for Crowd Counting". You can read our paper [here]().
+This is an official repository for our CVPR2024 work, "Single Domain Generalization for Crowd Counting". You can read our paper [here](https://arxiv.org/pdf/2403.09124.pdf).
 
 ## Requirements
 * Python 3.10.12
@@ -12,9 +12,9 @@ This is an official repository for our CVPR2024 work, "Single Domain Generalizat
 1. Download ShanghaiTech and UCF-QNRF datasets from official sites and unzip them.
 2. Run the following commands to preprocess the datasets:
     ```
-    python utils/preprocess_data.py --origin-dir [path_of_ShanghaiTech]/part_A --data-dir data/sta
-    python utils/preprocess_data.py --origin-dir [path_of_ShanghaiTech]/part_B --data-dir data/stb
-    python utils/preprocess_data.py --origin-dir [path_of_UCF-QNRF] --data-dir data/qnrf
+    python utils/preprocess_data.py --origin-dir [path_to_ShanghaiTech]/part_A --data-dir data/sta
+    python utils/preprocess_data.py --origin-dir [path_to_ShanghaiTech]/part_B --data-dir data/stb
+    python utils/preprocess_data.py --origin-dir [path_to_UCF-QNRF] --data-dir data/qnrf
     ```
 3. Run the following commands to generate GT density maps:
     ```
@@ -35,6 +35,12 @@ Run the following commands after you specify the path to the model weight in the
 ```
 python main.py --task test --config configs/sta_test_stb.yml
 python main.py --task test --config configs/sta_test_qnrf.yml
+```
+
+## Inference
+Run the following command:
+```
+python inference.py --img_path [path_to_img_file_or_directory] --model_path [path_to_model_weight] --save_path output.txt --vis_dir vis
 ```
 
 ## Pretrained Weights

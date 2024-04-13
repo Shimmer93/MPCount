@@ -184,7 +184,7 @@ class DGModel_memadd(DGModel_mem):
         return d1, d2, loss_con
     
 class DGModel_cls(DGModel_base):
-    def __init__(self, pretrained=True, den_dropout=0.5, cls_dropout=0.5, cls_thrs=0.5):
+    def __init__(self, pretrained=True, den_dropout=0.5, cls_dropout=0.3, cls_thrs=0.5):
         super().__init__(pretrained, den_dropout)
 
         self.cls_dropout = cls_dropout
@@ -228,7 +228,7 @@ class DGModel_cls(DGModel_base):
         return dc, c
     
 class DGModel_memcls(DGModel_mem):
-    def __init__(self, pretrained=True, mem_size=1024, mem_dim=256, den_dropout=0.5, cls_dropout=0.5, cls_thrs=0.5):
+    def __init__(self, pretrained=True, mem_size=1024, mem_dim=256, den_dropout=0.5, cls_dropout=0.3, cls_thrs=0.5):
         super().__init__(pretrained, mem_size, mem_dim, den_dropout)
 
         self.cls_dropout = cls_dropout
@@ -273,7 +273,7 @@ class DGModel_memcls(DGModel_mem):
         return dc, c
     
 class DGModel_final(DGModel_memcls):
-    def __init__(self, pretrained=True, mem_size=1024, mem_dim=256, cls_thrs=0.5, err_thrs=0.5, den_dropout=0.5, cls_dropout=0.5, has_err_loss=False):
+    def __init__(self, pretrained=True, mem_size=1024, mem_dim=256, cls_thrs=0.5, err_thrs=0.5, den_dropout=0.5, cls_dropout=0.3, has_err_loss=False):
         super().__init__(pretrained, mem_size, mem_dim, den_dropout, cls_dropout, cls_thrs)
 
         self.err_thrs = err_thrs
