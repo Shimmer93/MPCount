@@ -49,7 +49,7 @@ We provide pretrained weights in the table below:
 | ------ | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | A      | B: 11.4MAE, 19.7MSE<br>Q: 115.7MAE, 199.8MSE  | [OneDrive](https://hkustconnect-my.sharepoint.com/:u:/g/personal/zpengac_connect_ust_hk/EaWnUPugulxIiP4gK2F_bqcBJwJhru0aWa8JH6l8Dbk5DQ?e=2B0kJP) |
 | B      | A: 99.6MAE, 182.9MSE<br>Q: 165.6MAE, 290.4MSE | [OneDrive](https://hkustconnect-my.sharepoint.com/:u:/g/personal/zpengac_connect_ust_hk/EZp54KXswPVFnXHP2dhIGRABUZYrH4ZXaxBr5y9M7io2Bg?e=DnGP6v) |
-| Q      | A: 65.5MAE, 110.1MSE<br>B: 12.3MAE, 24.1MSE   | [OneDrive](https://hkustconnect-my.sharepoint.com/:u:/g/personal/zpengac_connect_ust_hk/EQYuWSlkgMtNqWUbL5lmv1YBOkmeXF3sa0hNFQ5QGcSpvQ?e=Hy1Pf6) |
+| Q      | A: 65.5MAE, 110.1MSE<br>B: 12.3MAE, 24.1MSE   | [OneDrive](https://hkustconnect-my.sharepoint.com/:u:/g/personal/zpengac_connect_ust_hk/EZkqneyxskBIgtFh6aBnEgcBIA8cW_tWQk047BaktLChqA?e=qGOuYm) |
 
 ## Citation
 If you find this work helpful in your research, please cite the following:
