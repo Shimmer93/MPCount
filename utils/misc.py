@@ -126,16 +126,17 @@ def seed_everything(seed):
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     torch.use_deterministic_algorithms(True, warn_only=True)
-    torch.backends.cudnn.deterministic = False
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
 def seed_worker(worker_id):
     worker_seed = torch.initial_seed() % 2**32
     np.random.seed(worker_seed)
     random.seed(worker_seed)
 
-def get_seeded_generator(seed):
+def get_seeded_generator(seed=0):
     g = torch.Generator()
-    g.manual_seed(0)
+    g.manual_seed(seed)
     return g
     
 def get_current_datetime():

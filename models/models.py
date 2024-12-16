@@ -4,6 +4,7 @@ import torch.nn.functional as F
 from torchvision import models
 from einops import rearrange
 from math import sqrt
+import functools
 
 class ConvBlock(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size=3, stride=1, padding=1, dilation=1, bias=False, bn=False, relu=True):
@@ -19,7 +20,43 @@ class ConvBlock(nn.Module):
         if self.relu is not None:
             y = self.relu(y)
         return y
+    
+# fix the non-deterministic behavior of F.interpolate
+# From: https://github.com/open-mmlab/mmsegmentation/issues/255
+class FixedUpsample(nn.Module):
 
+    def __init__(self, channel: int, scale_factor: int):
+        super().__init__()
+        # assert 'mode' not in kwargs and 'align_corners' not in kwargs and 'size' not in kwargs
+        assert isinstance(scale_factor, int) and scale_factor > 1 and scale_factor % 2 == 0
+        self.scale_factor = scale_factor
+        kernel_size = scale_factor + 1  # keep kernel size being odd
+        self.weight = nn.Parameter(
+            torch.empty((1, 1, kernel_size, kernel_size), dtype=torch.float32).expand(channel, -1, -1, -1).clone()
+        )
+        self.conv = functools.partial(
+            F.conv2d, weight=self.weight, bias=None, padding=scale_factor // 2, groups=channel
+        )
+        with torch.no_grad():
+            self.weight.fill_(1 / (kernel_size * kernel_size))
+
+    def forward(self, t):
+        if t is None:
+            return t
+        return self.conv(F.interpolate(t, scale_factor=self.scale_factor, mode='nearest'))
+    
+class Upsample(nn.Module):
+    def __init__(self, channel: int, scale_factor: int, deterministic=True):
+        super().__init__()
+        self.deterministic = deterministic
+        if deterministic:
+            self.upsample = FixedUpsample(channel, scale_factor)
+        else:
+            self.upsample = nn.Upsample(scale_factor=scale_factor, mode='bilinear', align_corners=False)
+
+    def forward(self, t):
+        return self.upsample(t)
+    
 def upsample(x, scale_factor=2, mode='bilinear'):
     if mode == 'nearest':
         return F.interpolate(x, scale_factor=scale_factor, mode=mode)
@@ -27,7 +64,7 @@ def upsample(x, scale_factor=2, mode='bilinear'):
         return F.interpolate(x, scale_factor=scale_factor, mode=mode, align_corners=False)
     
 class DGModel_base(nn.Module):
-    def __init__(self, pretrained=True, den_dropout=0.5):
+    def __init__(self, pretrained=True, den_dropout=0.5, deterministic=True):
         super().__init__()
 
         self.den_dropout = den_dropout
@@ -61,6 +98,13 @@ class DGModel_base(nn.Module):
             ConvBlock(256, 1, kernel_size=1, padding=0)
         )
 
+        self.upsample1 = Upsample(512, 2, deterministic)
+        self.upsample2 = Upsample(256, 2, deterministic)
+        self.upsample3 = Upsample(256, 2, deterministic)
+        self.upsample4 = Upsample(512, 4, deterministic)
+
+        self.upsample_d = Upsample(1, 4, deterministic)
+
     def forward_fe(self, x):
         x1 = self.enc1(x)
         x2 = self.enc2(x1)
@@ -68,19 +112,19 @@ class DGModel_base(nn.Module):
 
         x = self.dec3(x3)
         y3 = x
-        x = upsample(x, scale_factor=2)
+        x = self.upsample1(x)
         x = torch.cat([x, x2], dim=1)
 
         x = self.dec2(x)
         y2 = x
-        x = upsample(x, scale_factor=2)
+        x = self.upsample2(x)
         x = torch.cat([x, x1], dim=1)
 
         x = self.dec1(x)
         y1 = x
 
-        y2 = upsample(y2, scale_factor=2)
-        y3 = upsample(y3, scale_factor=4)
+        y2 = self.upsample3(y2)
+        y3 = self.upsample4(y3)
 
         y_cat = torch.cat([y1, y2, y3], dim=1)
 
@@ -91,13 +135,13 @@ class DGModel_base(nn.Module):
 
         y_den = self.den_dec(y_cat)
         d = self.den_head(y_den)
-        d = upsample(d, scale_factor=4)
+        d = self.upsample_d(d)
 
         return d
     
 class DGModel_mem(DGModel_base):
-    def __init__(self, pretrained=True, mem_size=1024, mem_dim=256, den_dropout=0.5):
-        super().__init__(pretrained, den_dropout)
+    def __init__(self, pretrained=True, mem_size=1024, mem_dim=256, den_dropout=0.5, deterministic=True):
+        super().__init__(pretrained, den_dropout, deterministic)
 
         self.mem_size = mem_size
         self.mem_dim = mem_dim
@@ -131,13 +175,13 @@ class DGModel_mem(DGModel_base):
         y_den_new, _ = self.forward_mem(y_den)
         d = self.den_head(y_den_new)
 
-        d = upsample(d, scale_factor=4)
+        d = self.upsample_d(d)
 
         return d
     
 class DGModel_memadd(DGModel_mem):
-    def __init__(self, pretrained=True, mem_size=1024, mem_dim=256, den_dropout=0.5, err_thrs=0.5):
-        super().__init__(pretrained, mem_size, mem_dim, den_dropout)
+    def __init__(self, pretrained=True, mem_size=1024, mem_dim=256, den_dropout=0.5, err_thrs=0.5, deterministic=True):
+        super().__init__(pretrained, mem_size, mem_dim, den_dropout, deterministic)
 
         self.err_thrs = err_thrs
 
@@ -178,14 +222,14 @@ class DGModel_memadd(DGModel_mem):
         d1 = self.den_head(y_den_new1)
         d2 = self.den_head(y_den_new2)
 
-        d1 = upsample(d1, scale_factor=4)
-        d2 = upsample(d2, scale_factor=4)
+        d1 = self.upsample_d(d1)
+        d2 = self.upsample_d(d2)
 
         return d1, d2, loss_con
     
 class DGModel_cls(DGModel_base):
-    def __init__(self, pretrained=True, den_dropout=0.5, cls_dropout=0.3, cls_thrs=0.5):
-        super().__init__(pretrained, den_dropout)
+    def __init__(self, pretrained=True, den_dropout=0.5, cls_dropout=0.3, cls_thrs=0.5, deterministic=True):
+        super().__init__(pretrained, den_dropout, deterministic)
 
         self.cls_dropout = cls_dropout
         self.cls_thrs = cls_thrs
@@ -223,13 +267,13 @@ class DGModel_cls(DGModel_base):
         c_resized = self.transform_cls_map(c, c_gt)
         d = self.den_head(y_den)
         dc = d * c_resized
-        dc = upsample(dc, scale_factor=4)
+        dc = self.upsample_d(dc)
 
         return dc, c
     
 class DGModel_memcls(DGModel_mem):
-    def __init__(self, pretrained=True, mem_size=1024, mem_dim=256, den_dropout=0.5, cls_dropout=0.3, cls_thrs=0.5):
-        super().__init__(pretrained, mem_size, mem_dim, den_dropout)
+    def __init__(self, pretrained=True, mem_size=1024, mem_dim=256, den_dropout=0.5, cls_dropout=0.3, cls_thrs=0.5, deterministic=True):
+        super().__init__(pretrained, mem_size, mem_dim, den_dropout, deterministic)
 
         self.cls_dropout = cls_dropout
         self.cls_thrs = cls_thrs
@@ -268,13 +312,13 @@ class DGModel_memcls(DGModel_mem):
         c_resized = self.transform_cls_map(c, c_gt)
         d = self.den_head(y_den_new)
         dc = d * c_resized
-        dc = upsample(dc, scale_factor=4)
+        dc = self.upsample_d(dc)
 
         return dc, c
     
 class DGModel_final(DGModel_memcls):
-    def __init__(self, pretrained=True, mem_size=1024, mem_dim=256, cls_thrs=0.5, err_thrs=0.5, den_dropout=0.5, cls_dropout=0.3, has_err_loss=False):
-        super().__init__(pretrained, mem_size, mem_dim, den_dropout, cls_dropout, cls_thrs)
+    def __init__(self, pretrained=True, mem_size=1024, mem_dim=256, cls_thrs=0.5, err_thrs=0.5, den_dropout=0.5, cls_dropout=0.3, has_err_loss=False, deterministic=True):
+        super().__init__(pretrained, mem_size, mem_dim, den_dropout, cls_dropout, cls_thrs, deterministic)
 
         self.err_thrs = err_thrs
         self.has_err_loss = has_err_loss
@@ -328,8 +372,8 @@ class DGModel_final(DGModel_memcls):
 
         d1 = self.den_head(y_den_new1)
         d2 = self.den_head(y_den_new2)
-        dc1 = upsample(d1 * c_resized, scale_factor=4)
-        dc2 = upsample(d2 * c_resized, scale_factor=4)
+        dc1 = self.upsample_d(d1 * c_resized)
+        dc2 = self.upsample_d(d2 * c_resized)
         c_err = upsample(c_err, scale_factor=4)
 
         return dc1, dc2, c1, c2, c_err, loss_con, loss_err

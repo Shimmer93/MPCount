@@ -97,9 +97,9 @@ class Trainer(object):
             best_criterion = current_criterion
             best_epoch = epoch
             self.log(f'Epoch {epoch}: saving best model...')
-            if epoch > 0:
-                os.remove(glob(os.path.join(self.log_dir, 'best*.pth'))[0])
-            self.save_ckpt(model, os.path.join(self.log_dir, f'best.pth'))
+            # if epoch > 0:
+            #     os.remove(glob(os.path.join(self.log_dir, 'best*.pth'))[0])
+            self.save_ckpt(model, os.path.join(self.log_dir, f'best_{best_epoch}.pth'))
 
         return best_criterion, best_epoch
         
