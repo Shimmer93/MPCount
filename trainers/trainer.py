@@ -65,14 +65,18 @@ class Trainer(object):
         # Training
         self.set_model_train(model)
         for batch in easy_track(train_dataloader, description=f'Epoch {epoch}: Training...'):
-            train_loss = self.train_step(model, loss, optimizer, batch, epoch)
+            train_loss, train_losses = self.train_step(model, loss, optimizer, batch, epoch)
         if scheduler is not None:
             if isinstance(scheduler, list):
                 for s in scheduler:
                     s.step()
             else:
                 scheduler.step()
-        self.log(f'Epoch {epoch}: Training loss: {train_loss:.4f} Version: {self.version}')
+        log_str = f'Epoch {epoch}: Training loss: {train_loss:.4f}'
+        for k, v in train_losses.items():
+            log_str += f', {k}: {v:.4f}'
+        log_str += f', Version: {self.version}'
+        self.log(log_str)
 
         # Validation
         self.set_model_eval(model)

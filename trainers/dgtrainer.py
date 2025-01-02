@@ -129,6 +129,7 @@ class DGTrainer(Trainer):
         imgs1 = imgs1.to(self.device)
         imgs2 = imgs2.to(self.device)
         gt_cmaps = gt_datas[-1].to(self.device)
+        losses = {}
 
         if self.mode == 'simple':
             optimizer.zero_grad()
@@ -170,7 +171,13 @@ class DGTrainer(Trainer):
             dmaps1, dmaps2, cmaps1, cmaps2, cerrmap, loss_con, loss_err = model.forward_train(imgs1, imgs2, gt_cmaps)
             loss_den = self.compute_count_loss(loss, dmaps1, gt_datas) + self.compute_count_loss(loss, dmaps2, gt_datas)
             loss_cls = F.binary_cross_entropy(cmaps1, gt_cmaps) + F.binary_cross_entropy(cmaps2, gt_cmaps)
-            loss_total = loss_den + 10 * loss_cls + 10 * loss_con # + loss_err 
+            loss_total = loss_den + 10 * loss_cls + 10 * loss_con + loss_err
+            losses = {
+                'den': loss_den.detach().item(),
+                'cls': loss_cls.detach().item(),
+                'con': loss_con.detach().item(),
+                'err': loss_err.detach().item()
+            }
 
             loss_total.backward()
             optimizer.step()
@@ -190,7 +197,7 @@ class DGTrainer(Trainer):
         else:
             raise ValueError('Unknown mode: {}'.format(self.mode))
 
-        return loss_total.detach().item()
+        return loss_total.detach().item(), losses
 
     def val_step(self, model, batch):
             

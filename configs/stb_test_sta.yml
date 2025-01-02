@@ -5,7 +5,7 @@ log_para: 1000
 patch_size: 10000
 mode: 'final'
 num_epochs: 180
-checkpoint: logs/stb/best.pth
+checkpoint: logs/stb10/best_70.pth
 model:
   name: 'final'
   params:
@@ -17,6 +17,7 @@ model:
     den_dropout: 0.5
     cls_dropout: 0.3
     has_err_loss: False
+    deterministic: True
 train_dataset: &train_dataset_params
   name: 'den_cls'
   params: 

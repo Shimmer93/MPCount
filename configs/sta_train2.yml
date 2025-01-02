@@ -1,13 +1,13 @@
-seed: 2025
-version: stb_modified
-device: 'cuda:0'
+seed: 2023
+version: sta2
+device: 'cuda:1'
 log_para: 1000
 patch_size: 10000
 mode: 'final'
 num_epochs: 180
 checkpoint: null
 model:
-  name: 'extend'
+  name: 'final'
   params:
     pretrained: True
     mem_size: 1024
@@ -21,7 +21,7 @@ model:
 train_dataset: &train_dataset_params
   name: 'den_cls'
   params: 
-    root: 'data/stb'
+    root: 'data/sta'
     crop_size: 320
     downsample: 1
     is_grey: False
@@ -31,7 +31,7 @@ val_dataset: *train_dataset_params
 test_dataset:
   name: 'den_cls'
   params: 
-    root: 'data/sta'
+    root: 'data/stb'
     crop_size: 320
     downsample: 1
     is_grey: False
@@ -51,12 +51,12 @@ test_loader: *val_loader_params
 optimizer:
   name: 'adamw'
   params:
-    lr: &lr 0.0005
+    lr: &lr 0.001
     weight_decay: 0.0001
 scheduler:
   name: 'onecycle'
   params:
     max_lr: *lr
     epochs: 300
-    steps_per_epoch: 40
+    steps_per_epoch: 15
     final_div_factor: 1000

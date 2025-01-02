@@ -6,7 +6,7 @@ import yaml
 import argparse
 
 from trainers.dgtrainer import DGTrainer
-from models.models import DGModel_base, DGModel_mem, DGModel_memadd, DGModel_cls, DGModel_memcls, DGModel_final
+from models.models import DGModel_base, DGModel_mem, DGModel_memadd, DGModel_cls, DGModel_memcls, DGModel_final, DGModel_extend
 from datasets.den_dataset import DensityMapDataset
 from datasets.den_cls_dataset import DenClsDataset
 from datasets.jhu_domain_dataset import JHUDomainDataset
@@ -26,6 +26,10 @@ def get_model(name, params):
         return DGModel_memcls(**params)
     elif name == 'final':
         return DGModel_final(**params)
+    elif name == 'extend':
+        return DGModel_extend(**params)
+    else:
+        raise ValueError('Unknown model: {}'.format(name))
 
 def get_loss():
     return nn.MSELoss()

@@ -157,7 +157,9 @@ class DGModel_mem(DGModel_base):
             ConvBlock(self.mem_dim, 1, kernel_size=1, padding=0)
         )
 
-    def forward_mem(self, y):
+    def forward_mem(self, y, mask=None):
+        if mask is not None:
+            y = y.detach() * (~mask) + y * mask
         b, k, h, w = y.shape
         m = self.mem.repeat(b, 1, 1)
         m_key = m.transpose(1, 2)
@@ -359,6 +361,90 @@ class DGModel_final(DGModel_memcls):
 
         y_den_new1, logits1 = self.forward_mem(y_den_masked1)
         y_den_new2, logits2 = self.forward_mem(y_den_masked2)
+        loss_con = self.jsd(logits1, logits2)
+
+        c1 = self.cls_head(x3_1)
+        c2 = self.cls_head(x3_2)
+
+        c_resized_gt = self.transform_cls_map_gt(c_gt)
+        c_resized1 = self.transform_cls_map_pred(c1)
+        c_resized2 = self.transform_cls_map_pred(c2)
+        c_err = torch.abs(c_resized1 - c_resized2)
+        c_resized = torch.clamp(c_resized_gt + c_err, 0, 1)
+
+        d1 = self.den_head(y_den_new1)
+        d2 = self.den_head(y_den_new2)
+        dc1 = self.upsample_d(d1 * c_resized)
+        dc2 = self.upsample_d(d2 * c_resized)
+        c_err = upsample(c_err, scale_factor=4)
+
+        return dc1, dc2, c1, c2, c_err, loss_con, loss_err
+
+
+class DGModel_extend(DGModel_memcls):
+    def __init__(self, pretrained=True, mem_size=1024, mem_dim=256, cls_thrs=0.5, err_thrs=0.5, den_dropout=0.5, cls_dropout=0.3, has_err_loss=False, deterministic=True):
+        super().__init__(pretrained, mem_size, mem_dim, den_dropout, cls_dropout, cls_thrs, deterministic)
+
+        self.err_thrs = err_thrs
+        self.has_err_loss = has_err_loss
+
+        self.den_dec = nn.Sequential(
+            ConvBlock(512+256+128, self.mem_dim, kernel_size=1, padding=0, bn=True)
+        )
+
+        self.cem_head = nn.Sequential(
+            ConvBlock(self.mem_dim, self.mem_dim, kernel_size=1, padding=0, bn=False)
+        )
+    
+    def jsd(self, logits1, logits2):
+        p1 = F.softmax(logits1, dim=1)
+        p2 = F.softmax(logits2, dim=1)
+        # pm = torch.clamp((0.5 * (p1 + p2)), min=1e-6, max=1-1e-6)
+        # jsd = 0.5 / logits1.shape[2] * (F.kl_div(p1.log(), pm, reduction='batchmean') + \
+        #           F.kl_div(p2.log(), pm, reduction='batchmean'))
+        # log_p1 = F.log_softmax(logits1, dim=1)
+        # log_p2 = F.log_softmax(logits2, dim=1)
+        # jsd = F.kl_div(log_p2, log_p1, reduction='batchmean', log_target=True) / logits1.shape[2]
+        jsd = F.mse_loss(p1, p2)
+        return jsd
+    
+    def forward(self, x, c_gt=None):
+        y_cat, x3 = self.forward_fe(x)
+
+        y_den = self.den_dec(y_cat)
+        e_mask = self.cem_head(y_den) > 0
+        y_den_new, _ = self.forward_mem(y_den * e_mask, e_mask)
+
+        c = self.cls_head(x3)
+        c_resized = self.transform_cls_map(c, c_gt)
+        d = self.den_head(y_den_new)
+        dc = d * c_resized
+        dc = self.upsample_d(dc)
+
+        return dc, c
+    
+    def forward_train(self, img1, img2, c_gt=None):
+        y_cat1, x3_1 = self.forward_fe(img1)
+        y_cat2, x3_2 = self.forward_fe(img2)
+        y_den1 = self.den_dec(y_cat1)
+        y_den2 = self.den_dec(y_cat2)
+        y_in1 = F.instance_norm(y_den1, eps=1e-5)
+        y_in2 = F.instance_norm(y_den2, eps=1e-5)
+
+        e_y = torch.abs(y_in1 - y_in2)
+        e_mask = (e_y < self.err_thrs).clone().detach()
+        # e_y = torch.square(y_in1 - y_in2)
+        # e_mask = ((e_y).mean(dim=1, keepdim=True) < self.err_thrs).clone().detach()
+        # print(e_mask.sum() / e_mask.numel())
+        # loss_err = F.l1_loss(y_in1, y_in2) if self.has_err_loss else 0
+
+        e_mask_pred1 = self.cem_head(y_den1)
+        e_mask_pred2 = self.cem_head(y_den2)
+
+        loss_err = F.binary_cross_entropy_with_logits(e_mask_pred1, e_mask.to(dtype=e_mask_pred1.dtype)) + F.binary_cross_entropy_with_logits(e_mask_pred2, e_mask.to(dtype=e_mask_pred2.dtype))
+
+        y_den_new1, logits1 = self.forward_mem(y_den1 * e_mask, e_mask)
+        y_den_new2, logits2 = self.forward_mem(y_den2 * e_mask, e_mask)
         loss_con = self.jsd(logits1, logits2)
 
         c1 = self.cls_head(x3_1)

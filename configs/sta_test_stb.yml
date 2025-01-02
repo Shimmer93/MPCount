@@ -1,13 +1,13 @@
-seed: 2023
+seed: 2025
 version: sta
 device: 'cuda:0'
 log_para: 1000
 patch_size: 10000
 mode: 'final'
 num_epochs: 180
-checkpoint: logs/sta/best.pth
+checkpoint: logs/sta_modified2/best_109.pth
 model:
-  name: 'final'
+  name: 'extend'
   params:
     pretrained: True
     mem_size: 1024
@@ -17,6 +17,7 @@ model:
     den_dropout: 0.5
     cls_dropout: 0.3
     has_err_loss: False
+    deterministic: True
 train_dataset: &train_dataset_params
   name: 'den_cls'
   params: 
