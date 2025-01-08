@@ -31,11 +31,12 @@ class DGTrainer(Trainer):
         else:
             super().save_ckpt(model, path)
 
-    def compute_count_loss(self, loss: nn.Module, pred_dmaps, gt_datas, weights=None):
+    def compute_count_loss(self, loss: nn.Module, pred_dmaps, gt_datas, has_weights=False):
         if loss.__class__.__name__ == 'MSELoss':
-            _, gt_dmaps, _ = gt_datas
+            gt_dmaps = gt_datas[1]
             gt_dmaps = gt_dmaps.to(self.device)
-            if weights is not None:
+            if has_weights:
+                weights = gt_datas[-1].to(self.device)
                 pred_dmaps = pred_dmaps * weights
                 gt_dmaps = gt_dmaps * weights
             loss_value = loss(pred_dmaps, gt_dmaps * self.log_para)
@@ -128,7 +129,7 @@ class DGTrainer(Trainer):
         imgs1, imgs2, gt_datas = batch
         imgs1 = imgs1.to(self.device)
         imgs2 = imgs2.to(self.device)
-        gt_cmaps = gt_datas[-1].to(self.device)
+        gt_cmaps = gt_datas[2].to(self.device)
         losses = {}
 
         if self.mode == 'simple':
@@ -169,7 +170,7 @@ class DGTrainer(Trainer):
         elif self.mode == 'final':
             optimizer.zero_grad()
             dmaps1, dmaps2, cmaps1, cmaps2, cerrmap, loss_con, loss_err = model.forward_train(imgs1, imgs2, gt_cmaps)
-            loss_den = self.compute_count_loss(loss, dmaps1, gt_datas) + self.compute_count_loss(loss, dmaps2, gt_datas)
+            loss_den = self.compute_count_loss(loss, dmaps1, gt_datas, has_weights=True) + self.compute_count_loss(loss, dmaps2, gt_datas, has_weights=True)
             loss_cls = F.binary_cross_entropy(cmaps1, gt_cmaps) + F.binary_cross_entropy(cmaps2, gt_cmaps)
             loss_total = loss_den + 10 * loss_cls + 10 * loss_con + loss_err
             losses = {

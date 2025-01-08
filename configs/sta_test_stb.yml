@@ -1,11 +1,11 @@
 seed: 2025
-version: sta
+version: sta_modified3
 device: 'cuda:0'
 log_para: 1000
 patch_size: 10000
 mode: 'final'
 num_epochs: 180
-checkpoint: logs/sta_modified2/best_109.pth
+checkpoint: logs/sta_modified3/best_161.pth
 model:
   name: 'extend'
   params:

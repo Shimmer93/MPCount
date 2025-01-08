@@ -21,7 +21,8 @@ class DenClsDataset(DensityMapDataset):
         points = transposed_batch[2]  # the number of points is not fixed, keep it as a list of tensor
         dmaps = torch.stack(transposed_batch[3], 0)
         bmaps = torch.stack(transposed_batch[4], 0)
-        return images1, images2, (points, dmaps, bmaps)
+        weights = torch.stack(transposed_batch[5], 0)
+        return images1, images2, (points, dmaps, bmaps, weights)
 
     def __init__(self, root, crop_size, downsample, method, is_grey, unit_size, pre_resize=1, roi_map_path=None, gt_dir=None, gen_root=None):
         super().__init__(root, crop_size, downsample, method, is_grey, unit_size, pre_resize, roi_map_path, gt_dir, gen_root)
@@ -33,6 +34,24 @@ class DenClsDataset(DensityMapDataset):
             T.ToTensor(),
             T.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
         ])
+
+        self.densities = self._get_all_densities()
+        self.log_densities = np.log(np.sqrt(self.densities) + 1)
+        self.bins = np.linspace(0, self.log_densities.max(), 10)
+        self.bin_counts, self.bin_edges = np.histogram(self.log_densities, bins=self.bins)
+
+    def _get_all_densities(self):
+        dmaps = [img_fn.replace('.jpg', '_dmap.npy') for img_fn in self.img_fns]
+        densities = []
+
+        for dmap in dmaps:
+            d = np.load(dmap)
+            d = torch.from_numpy(d).float()
+            d_nonzeros = d[d > 0]
+            densities.append(d_nonzeros)
+
+        densities = np.concatenate(densities)
+        return densities
 
     def __getitem__(self, index):
         img_fn = self.img_fns[index]
@@ -61,7 +80,13 @@ class DenClsDataset(DensityMapDataset):
             # bmap = ((bmap_orig > 0).long() + (bmap_orig > 1).long()).squeeze(0)
             bmap_orig = dmap.clone().reshape(1, dmap.shape[1]//16, 16, dmap.shape[2]//16, 16).sum(dim=(2, 4))
             bmap = (bmap_orig > 0).float()
-            return img1, img2, gt, dmap, bmap
+
+            weights = torch.ones_like(dmap)
+            for i in range(len(self.bin_counts)):
+                idx = (self.bins[i] <= torch.log(dmap+1)) * (torch.log(dmap+1) < self.bins[i+1])
+                weights[idx] = torch.sqrt(torch.tensor(len(self.log_densities) / (self.bin_counts[i] * len(self.bins))))
+
+            return img1, img2, gt, dmap, bmap, weights
         elif self.method in ['val', 'test']:
             return self._val_transform(img, gt, basename)
         

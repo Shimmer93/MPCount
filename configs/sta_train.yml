@@ -1,6 +1,6 @@
 seed: 2025
-version: sta_modified2
-device: 'cuda:0'
+version: sta_modified3
+device: 'cuda:1'
 log_para: 1000
 patch_size: 10000
 mode: 'final'

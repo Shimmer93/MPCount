@@ -393,19 +393,19 @@ class DGModel_extend(DGModel_memcls):
         )
 
         self.cem_head = nn.Sequential(
-            ConvBlock(self.mem_dim, self.mem_dim, kernel_size=1, padding=0, bn=False)
+            ConvBlock(self.mem_dim, self.mem_dim, kernel_size=1, padding=0, bn=False, relu=False)
         )
     
     def jsd(self, logits1, logits2):
-        p1 = F.softmax(logits1, dim=1)
-        p2 = F.softmax(logits2, dim=1)
+        # p1 = F.softmax(logits1, dim=1)
+        # p2 = F.softmax(logits2, dim=1)
         # pm = torch.clamp((0.5 * (p1 + p2)), min=1e-6, max=1-1e-6)
         # jsd = 0.5 / logits1.shape[2] * (F.kl_div(p1.log(), pm, reduction='batchmean') + \
         #           F.kl_div(p2.log(), pm, reduction='batchmean'))
-        # log_p1 = F.log_softmax(logits1, dim=1)
-        # log_p2 = F.log_softmax(logits2, dim=1)
-        # jsd = F.kl_div(log_p2, log_p1, reduction='batchmean', log_target=True) / logits1.shape[2]
-        jsd = F.mse_loss(p1, p2)
+        log_p1 = F.log_softmax(logits1, dim=1)
+        log_p2 = F.log_softmax(logits2, dim=1)
+        jsd = F.kl_div(log_p2, log_p1, reduction='batchmean', log_target=True) / logits1.shape[2]
+        # jsd = F.mse_loss(p1, p2)
         return jsd
     
     def forward(self, x, c_gt=None):

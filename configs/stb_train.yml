@@ -1,10 +1,10 @@
 seed: 2025
-version: stb_modified
-device: 'cuda:0'
+version: stb_modified3
+device: 'cuda:1'
 log_para: 1000
 patch_size: 10000
 mode: 'final'
-num_epochs: 180
+num_epochs: 300
 checkpoint: null
 model:
   name: 'extend'
@@ -16,7 +16,7 @@ model:
     err_thrs: 0.5
     den_dropout: 0.5
     cls_dropout: 0.3
-    has_err_loss: False
+    has_err_loss: True
     deterministic: True
 train_dataset: &train_dataset_params
   name: 'den_cls'
@@ -51,12 +51,12 @@ test_loader: *val_loader_params
 optimizer:
   name: 'adamw'
   params:
-    lr: &lr 0.0005
+    lr: &lr 0.001
     weight_decay: 0.0001
 scheduler:
   name: 'onecycle'
   params:
     max_lr: *lr
     epochs: 300
-    steps_per_epoch: 40
+    steps_per_epoch: 20
     final_div_factor: 1000
