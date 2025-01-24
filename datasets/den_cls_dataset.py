@@ -3,6 +3,7 @@ import torch
 import torchvision.transforms as T
 import torchvision.transforms.functional as F
 from PIL import Image
+from scipy.ndimage import gaussian_filter
 
 import random
 import os
@@ -37,8 +38,9 @@ class DenClsDataset(DensityMapDataset):
 
         self.densities = self._get_all_densities()
         self.log_densities = np.log(np.sqrt(self.densities) + 1)
-        self.bins = np.linspace(0, self.log_densities.max(), 10)
-        self.bin_counts, self.bin_edges = np.histogram(self.log_densities, bins=self.bins)
+        # bins = np.linspace(0, self.log_densities.max(), 16)
+        self.bin_counts, self.bin_edges = np.histogram(self.log_densities, bins=10)
+        self.weights = (len(self.log_densities) / (self.bin_counts * len(self.bin_edges))) ** 0.2
 
     def _get_all_densities(self):
         dmaps = [img_fn.replace('.jpg', '_dmap.npy') for img_fn in self.img_fns]
@@ -46,7 +48,6 @@ class DenClsDataset(DensityMapDataset):
 
         for dmap in dmaps:
             d = np.load(dmap)
-            d = torch.from_numpy(d).float()
             d_nonzeros = d[d > 0]
             densities.append(d_nonzeros)
 
@@ -83,8 +84,10 @@ class DenClsDataset(DensityMapDataset):
 
             weights = torch.ones_like(dmap)
             for i in range(len(self.bin_counts)):
-                idx = (self.bins[i] <= torch.log(dmap+1)) * (torch.log(dmap+1) < self.bins[i+1])
-                weights[idx] = torch.sqrt(torch.tensor(len(self.log_densities) / (self.bin_counts[i] * len(self.bins))))
+                idx = (self.bin_edges[i] <= torch.log(torch.sqrt(dmap)+1)) * (torch.log(torch.sqrt(dmap)+1) < self.bin_edges[i+1])
+                weights[idx] = self.weights[i]
+            weights[weights <= 0] = self.weights[0]
+
 
             return img1, img2, gt, dmap, bmap, weights
         elif self.method in ['val', 'test']:

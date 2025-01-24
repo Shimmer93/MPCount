@@ -1,10 +1,10 @@
 seed: 2025
-version: sta_modified31
-device: 'cuda:0'
+version: sta_final
+device: 'cuda:1'
 log_para: 1000
 patch_size: 10000
 mode: 'final'
-num_epochs: 300
+num_epochs: 120
 checkpoint: null
 model:
   name: 'final'
@@ -16,7 +16,7 @@ model:
     err_thrs: 0.5
     den_dropout: 0.5
     cls_dropout: 0.3
-    has_err_loss: True
+    has_err_loss: False
     deterministic: True
 train_dataset: &train_dataset_params
   name: 'den_cls'
@@ -51,10 +51,13 @@ test_loader: *val_loader_params
 optimizer:
   name: 'adamw'
   params:
-    lr: &lr 0.0001
+    lr: &lr 0.001
     weight_decay: 0.0001
 scheduler:
-  name: 'step'
+  name: 'onecycle'
   params:
-    step_size: 1
-    gamma: 0.98
+    max_lr: *lr
+    epochs: 120
+    steps_per_epoch: 29
+    final_div_factor: 10000
+    three_phase: True

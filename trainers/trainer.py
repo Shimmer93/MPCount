@@ -160,3 +160,71 @@ class Trainer(object):
 
         self.log('Visualization results saved to {}'.format(self.log_dir))
         self.log('End visualization at {}'.format(get_current_datetime()))
+
+    def train_test_epoch(self, model, loss, train_dataloader, val_dataloader, test_dataloader, optimizer, scheduler, epoch, best_criterion, best_epoch):
+        start_time = time.time()
+
+        # Training
+        self.set_model_train(model)
+        for batch in easy_track(train_dataloader, description=f'Epoch {epoch}: Training...'):
+            train_loss, train_losses = self.train_step(model, loss, optimizer, batch, epoch)
+        if scheduler is not None:
+            if isinstance(scheduler, list):
+                for s in scheduler:
+                    s.step()
+            else:
+                scheduler.step()
+        log_str = f'Epoch {epoch}: Training loss: {train_loss:.4f}'
+        for k, v in train_losses.items():
+            log_str += f', {k}: {v:.4f}'
+        log_str += f', Version: {self.version}'
+        self.log(log_str)
+
+        # Validation
+        self.set_model_eval(model)
+        criterion_meter = AverageMeter()
+        additional_meter = DictAvgMeter()
+        for batch in easy_track(val_dataloader, description=f'Epoch {epoch}: Validating...'):
+            with torch.no_grad():
+                criterion, additional = self.val_step(model, batch)
+            criterion_meter.update(criterion, additional['n']) if 'n' in additional else criterion_meter.update(criterion)
+            additional_meter.update(additional)
+        current_criterion = criterion_meter.avg
+        self.log(f'Epoch {epoch}: Val criterion: {current_criterion:.4f}', end=' ')
+        for k, v in additional_meter.avg.items():
+            self.log(f'{k}: {v:.4f}', end=' ')
+        self.log(f'best: {best_criterion:.4f}, time: {time.time() - start_time:.4f}')
+
+        # Checkpoint
+        if epoch > 0:
+            os.remove(glob(os.path.join(self.log_dir, 'last*.pth'))[0])
+        self.save_ckpt(model, os.path.join(self.log_dir, f'last.pth'))
+        if current_criterion < best_criterion:
+            best_criterion = current_criterion
+            best_epoch = epoch
+            self.log(f'Epoch {epoch}: saving best model...')
+            # if epoch > 0:
+            #     os.remove(glob(os.path.join(self.log_dir, 'best*.pth'))[0])
+            if epoch > 20:
+                self.save_ckpt(model, os.path.join(self.log_dir, f'best_{best_epoch}.pth'))
+                self.test(model, test_dataloader, os.path.join(self.log_dir, f'best_{best_epoch}.pth'))
+
+        return best_criterion, best_epoch
+
+    def train_test(self, model, loss, train_dataloader, val_dataloader, test_dataloader, optimizer, scheduler, checkpoint=None, num_epochs=100):
+        self.log('Start training at {}'.format(get_current_datetime()))
+        self.load_ckpt(model, checkpoint)
+
+        model = model.to(self.device) if isinstance(model, nn.Module) else [m.to(self.device) for m in model]
+        loss = loss.to(self.device)
+        
+        best_criterion = 1e10
+        best_epoch = -1
+
+        for epoch in range(num_epochs):
+            best_criterion, best_epoch = self.train_test_epoch(
+                model, loss, train_dataloader, val_dataloader, test_dataloader, optimizer, scheduler, epoch, best_criterion, best_epoch)
+
+        self.log('Best epoch: {}, best criterion: {}'.format(best_epoch, best_criterion))
+        self.log('Training results saved to {}'.format(self.log_dir))
+        self.log('End training at {}'.format(get_current_datetime()))

@@ -1,10 +1,10 @@
-seed: 2023
-version: sta2
-device: 'cuda:1'
+seed: 2025
+version: sta_modified32
+device: 'cuda:0'
 log_para: 1000
 patch_size: 10000
 mode: 'final'
-num_epochs: 180
+num_epochs: 300
 checkpoint: null
 model:
   name: 'final'
@@ -51,12 +51,10 @@ test_loader: *val_loader_params
 optimizer:
   name: 'adamw'
   params:
-    lr: &lr 0.001
+    lr: &lr 0.00005
     weight_decay: 0.0001
 scheduler:
-  name: 'onecycle'
+  name: 'step'
   params:
-    max_lr: *lr
-    epochs: 300
-    steps_per_epoch: 15
-    final_div_factor: 1000
+    step_size: 1
+    gamma: 0.98

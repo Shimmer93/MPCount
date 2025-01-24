@@ -1,13 +1,13 @@
 seed: 2025
-version: stb_modified3
-device: 'cuda:1'
+version: stb_modified34
+device: 'cuda:0'
 log_para: 1000
 patch_size: 10000
 mode: 'final'
 num_epochs: 300
 checkpoint: null
 model:
-  name: 'extend'
+  name: 'final'
   params:
     pretrained: True
     mem_size: 1024
@@ -51,12 +51,10 @@ test_loader: *val_loader_params
 optimizer:
   name: 'adamw'
   params:
-    lr: &lr 0.001
+    lr: &lr 0.000025
     weight_decay: 0.0001
 scheduler:
-  name: 'onecycle'
+  name: 'step'
   params:
-    max_lr: *lr
-    epochs: 300
-    steps_per_epoch: 20
-    final_div_factor: 1000
+    step_size: 1
+    gamma: 0.98

@@ -1,13 +1,13 @@
 seed: 2025
-version: sta_modified31
-device: 'cuda:0'
+version: qnrf_extend
+device: 'cuda:1'
 log_para: 1000
 patch_size: 10000
 mode: 'final'
 num_epochs: 300
 checkpoint: null
 model:
-  name: 'final'
+  name: 'extend'
   params:
     pretrained: True
     mem_size: 1024
@@ -21,7 +21,7 @@ model:
 train_dataset: &train_dataset_params
   name: 'den_cls'
   params: 
-    root: 'data/sta'
+    root: 'data/qnrf'
     crop_size: 320
     downsample: 1
     is_grey: False
@@ -31,14 +31,14 @@ val_dataset: *train_dataset_params
 test_dataset:
   name: 'den_cls'
   params: 
-    root: 'data/stb'
+    root: 'data/sta'
     crop_size: 320
     downsample: 1
     is_grey: False
     unit_size: 16
     pre_resize: 1
 train_loader:
-  batch_size: 16
+  batch_size: 8
   num_workers: 16
   shuffle: True
   pin_memory: True
@@ -51,10 +51,12 @@ test_loader: *val_loader_params
 optimizer:
   name: 'adamw'
   params:
-    lr: &lr 0.0001
+    lr: &lr 0.0005
     weight_decay: 0.0001
 scheduler:
-  name: 'step'
+  name: 'onecycle'
   params:
-    step_size: 1
-    gamma: 0.98
+    max_lr: *lr
+    epochs: 300
+    steps_per_epoch: 29
+    final_div_factor: 1000

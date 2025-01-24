@@ -9,6 +9,7 @@ from trainers.dgtrainer import DGTrainer
 from models.models import DGModel_base, DGModel_mem, DGModel_memadd, DGModel_cls, DGModel_memcls, DGModel_final, DGModel_extend
 from datasets.den_dataset import DensityMapDataset
 from datasets.den_cls_dataset import DenClsDataset
+from datasets.den_cls_aug_dataset import DenClsAugDataset
 from datasets.jhu_domain_dataset import JHUDomainDataset
 from datasets.jhu_domain_cls_dataset import JHUDomainClsDataset
 from utils.misc import seed_worker, get_seeded_generator, seed_everything
@@ -41,6 +42,9 @@ def get_dataset(name, params, method):
     elif name == 'den_cls':
         dataset = DenClsDataset(method=method, **params)
         collate = DenClsDataset.collate
+    elif name == 'den_cls_aug':
+        dataset = DenClsAugDataset(method=method, **params)
+        collate = DenClsAugDataset.collate
     elif name == 'jhu_domain':
         dataset = JHUDomainDataset(method=method, **params)
         collate = JHUDomainDataset.collate
@@ -116,7 +120,7 @@ def load_config(config_path, task):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, default='configs/dg.yaml', help='path to config file')
-    parser.add_argument('--task', type=str, default='train', choices=['train', 'test', 'vis'], help='task to perform')
+    parser.add_argument('--task', type=str, default='train', choices=['train', 'test', 'vis', 'train_test'], help='task to perform')
     args = parser.parse_args()
 
     init_params, task_params = load_config(args.config, args.task)
@@ -128,6 +132,8 @@ if __name__ == '__main__':
         trainer.train(**task_params)
     elif args.task == 'test':
         trainer.test(**task_params)
+    elif args.task == 'train_test':
+        trainer.train_test(**task_params)
     elif args.task == 'vis':
         trainer.vis(**task_params)
     else:

@@ -1,13 +1,13 @@
 seed: 2025
-version: sta_modified3
+version: sta_modified29
 device: 'cuda:0'
 log_para: 1000
 patch_size: 10000
 mode: 'final'
 num_epochs: 180
-checkpoint: logs/sta_modified3/best_161.pth
+checkpoint: logs/sta_modified29/best_190.pth
 model:
-  name: 'extend'
+  name: 'final'
   params:
     pretrained: True
     mem_size: 1024
@@ -15,8 +15,8 @@ model:
     cls_thrs: 0.5
     err_thrs: 0.5
     den_dropout: 0.5
-    cls_dropout: 0.3
-    has_err_loss: False
+    cls_dropout: 0.5
+    has_err_loss: True
     deterministic: True
 train_dataset: &train_dataset_params
   name: 'den_cls'
@@ -31,7 +31,7 @@ val_dataset: *train_dataset_params
 test_dataset:
   name: 'den_cls'
   params: 
-    root: 'data/stb'
+    root: 'data/qnrf'
     crop_size: 320
     downsample: 1
     is_grey: False

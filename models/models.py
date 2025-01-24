@@ -330,16 +330,20 @@ class DGModel_final(DGModel_memcls):
         )
     
     def jsd(self, logits1, logits2):
-        p1 = F.softmax(logits1, dim=1)
-        p2 = F.softmax(logits2, dim=1)
-        # pm = (0.5 * (p1 + p2))
-        # jsd = 0.5 / logits1.shape[2] * (F.kl_div(p1.log(), pm, reduction='batchmean') + \
-        #           F.kl_div(p2.log(), pm, reduction='batchmean'))
+        # p1 = F.softmax(logits1, dim=1)
+        # p2 = F.softmax(logits2, dim=1)
+        # pm = (0.5 * (p1 + p2)).detach()
+        # # jsd = 0.5 / logits1.shape[2] * (F.kl_div(p1.log(), pm, reduction='batchmean') + \
+        # #           F.kl_div(p2.log(), pm, reduction='batchmean'))
         # log_p1 = F.log_softmax(logits1, dim=1)
         # log_p2 = F.log_softmax(logits2, dim=1)
         # jsd = F.kl_div(log_p2, log_p1, reduction='batchmean', log_target=True) / logits1.shape[2]
-        jsd = F.mse_loss(p1, p2)
-        return jsd
+        # jsd = F.mse_loss(p1, p2)
+        # return jsd
+        p = F.softmax(logits1, dim=1)
+        q = F.softmax(logits2, dim=1)
+        m = (0.5 * (p + q)).detach()
+        return (0.5 * F.kl_div(F.log_softmax(logits1, dim=1), m, reduction='batchmean') + 0.5 * F.kl_div(F.log_softmax(logits2, dim=1), m, reduction='batchmean')) / logits1.shape[2]
     
     def forward_train(self, img1, img2, c_gt=None):
         y_cat1, x3_1 = self.forward_fe(img1)
@@ -354,7 +358,7 @@ class DGModel_final(DGModel_memcls):
         # e_y = torch.square(y_in1 - y_in2)
         # e_mask = ((e_y).mean(dim=1, keepdim=True) < self.err_thrs).clone().detach()
         # print(e_mask.sum() / e_mask.numel())
-        loss_err = F.l1_loss(y_in1, y_in2) if self.has_err_loss else 0
+        loss_err = F.mse_loss(y_in1, y_in2) if self.has_err_loss else 0
 
         y_den_masked1 = F.dropout2d(y_den1 * e_mask, self.den_dropout)
         y_den_masked2 = F.dropout2d(y_den2 * e_mask, self.den_dropout)
@@ -402,11 +406,12 @@ class DGModel_extend(DGModel_memcls):
         # pm = torch.clamp((0.5 * (p1 + p2)), min=1e-6, max=1-1e-6)
         # jsd = 0.5 / logits1.shape[2] * (F.kl_div(p1.log(), pm, reduction='batchmean') + \
         #           F.kl_div(p2.log(), pm, reduction='batchmean'))
-        log_p1 = F.log_softmax(logits1, dim=1)
-        log_p2 = F.log_softmax(logits2, dim=1)
-        jsd = F.kl_div(log_p2, log_p1, reduction='batchmean', log_target=True) / logits1.shape[2]
+        p = F.softmax(logits1, dim=1)
+        q = F.softmax(logits2, dim=1)
+        m = (0.5 * (p + q)).detach()
+        return (0.5 * F.kl_div(F.log_softmax(logits1, dim=1), m, reduction='batchmean') + 0.5 * F.kl_div(F.log_softmax(logits2, dim=1), m, reduction='batchmean')) / logits1.shape[2]
         # jsd = F.mse_loss(p1, p2)
-        return jsd
+        # return jsd
     
     def forward(self, x, c_gt=None):
         y_cat, x3 = self.forward_fe(x)

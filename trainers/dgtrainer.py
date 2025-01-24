@@ -177,7 +177,7 @@ class DGTrainer(Trainer):
                 'den': loss_den.detach().item(),
                 'cls': loss_cls.detach().item(),
                 'con': loss_con.detach().item(),
-                'err': loss_err.detach().item()
+                'err': 0 if loss_err == 0 else loss_err.detach().item()
             }
 
             loss_total.backward()

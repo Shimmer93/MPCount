@@ -58,7 +58,7 @@ class DenClsAugDataset(DensityMapDataset):
     def __getitem__(self, index):
         img_fn = self.img_fns[index]
         img, img_ext = self._load_img(img_fn)
-        if random.random() > 0.88:
+        if random.random() > 0.1:
             id = random.randint(0, 2)
             img_aug_fn = img_fn.replace(self.root, self.aug_root).replace('.jpg', f'_aug_{id}.jpg')
             img_aug, _ = self._load_img(img_aug_fn)
