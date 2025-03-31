@@ -56,6 +56,10 @@ We provide pretrained weights that produce the results in our original paper in 
 
 ### New Deterministic Version
 To make the results fully reproducible, we implement a new version of MPCount which does not use `torch.nn.functional.interpolate`. We will release its results and weights soon.
+| Source | Performance                                   | Weights                                                                                                                                          |
+| ------ | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A      | B: 11.2MAE, 20.0MSE<br>Q: 112.8MAE, 193.8MSE  | [OneDrive](https://hkustconnect-my.sharepoint.com/:u:/g/personal/zpengac_connect_ust_hk/EcAI-VssbkJLiod1PXBwYHkBme78XsJeS9DlnboC5LTZlw?e=mvCg4S)<br>[Google Drive](https://drive.google.com/file/d/1EBQzAcwZOhsrd00XDDnUTQ-wYH36y6oV/view?usp=sharing) |
+| B      | A: 99.6MAE, 182.9MSE<br>Q: 165.6MAE, 290.4MSE | [OneDrive](https://hkustconnect-my.sharepoint.com/:u:/g/personal/zpengac_connect_ust_hk/EZp54KXswPVFnXHP2dhIGRABUZYrH4ZXaxBr5y9M7io2Bg?e=DnGP6v)<br>[Google Drive](https://drive.google.com/file/d/1sYGMGNOqj0OUEz-5zE9S1G7hjOzmtJsZ/view?usp=sharing) |
 
 ## Citation
 If you find this work helpful in your research, please cite the following:
