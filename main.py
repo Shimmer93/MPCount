@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 import os
+import shutil
 import yaml
 import argparse
 
@@ -118,7 +119,7 @@ if __name__ == '__main__':
     init_params, task_params = load_config(args.config, args.task)
 
     trainer = DGTrainer(**init_params)
-    os.system(f'cp {args.config} {trainer.log_dir}')
+    shutil.copy(args.config, trainer.log_dir)
 
     if args.task == 'train':
         trainer.train(**task_params)
